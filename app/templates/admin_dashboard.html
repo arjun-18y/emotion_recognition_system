@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="panel">
+  <h2>Admin Dashboard</h2>
+  <p class="lead">Manage datasets and retrain model versions.</p>
+  <p id="mongoMsg"></p>
+  <form id="dsForm">
+    <input type="file" name="file" accept=".csv" multiple required>
+    <button type="submit">Upload Dataset</button>
+  </form>
+  <button id="retrainBtn">Retrain Model</button>
+</section>
+<section class="panel">
+  <h3>Models</h3>
+  <ul id="modelsList" class="models-list"></ul>
+</section>
+<script>
+const token = localStorage.getItem('token');
+const dsForm = document.getElementById('dsForm');
+const retrainBtn = document.getElementById('retrainBtn');
+const modelsList = document.getElementById('modelsList');
+const mongoMsg = document.getElementById('mongoMsg');
+
+function authHeaders() {
+  return { Authorization: 'Bearer ' + token };
+}
+
+function renderModels(models) {
+  modelsList.innerHTML = '';
+  if (!Array.isArray(models) || models.length === 0) {
+    modelsList.innerHTML = '<li class="model-item">No models available</li>';
+    return;
+  }
+  for (const m of models) {
+    const li = document.createElement('li');
+    li.className = 'model-item';
+    const acc = m.accuracy ?? 'N/A';
+    li.textContent = `Version: ${m.version || 'N/A'} | Status: ${m.status || 'N/A'} | Acc: ${acc}`;
+    modelsList.appendChild(li);
+  }
+}
+
+async function loadAdminData() {
+  if (!token) {
+    window.location.href = '/auth/login';
+    return;
+  }
+
+  const res = await fetch('/admin/bootstrap', {
+    method: 'GET',
+    headers: authHeaders()
+  });
+
+  if (!res.ok) {
+    localStorage.removeItem('token');
+    alert('Please log in with an admin account.');
+    window.location.href = '/auth/login';
+    return;
+  }
+
+  const data = await res.json();
+  mongoMsg.textContent = data.mongo_error || '';
+  renderModels(data.models || []);
+}
+
+dsForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(dsForm);
+  const res = await fetch('/admin/dataset', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: fd
+  });
+  const data = await res.json();
+  alert(data.message || data.error || 'Upload complete');
+  if (res.ok) {
+    await loadAdminData();
+  }
+});
+
+retrainBtn.addEventListener('click', async () => {
+  const res = await fetch('/admin/retrain', {
+    method: 'POST',
+    headers: authHeaders()
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.error || 'Retraining failed');
+    return;
+  }
+  alert('Retrained version ' + (data.version || ''));
+  await loadAdminData();
+});
+
+loadAdminData();
+</script>
+{% endblock %}

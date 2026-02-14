@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="panel auth-panel">
+  <h2>Create Account</h2>
+  <p class="lead">Register to start predicting emotions from text and screenshots.</p>
+  <form id="regForm">
+    <input type="email" name="email" placeholder="Email" required>
+    <input type="password" name="password" placeholder="Password (min 8)" required>
+    <button type="submit">Register</button>
+  </form>
+</section>
+<script>
+const form = document.getElementById('regForm');
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(form);
+  const payload = { email: fd.get('email'), password: fd.get('password') };
+  const res = await fetch('/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.error || 'Registration failed');
+    return;
+  }
+  alert(data.message || 'Registered');
+  window.location.href = '/auth/login';
+});
+</script>
+{% endblock %}

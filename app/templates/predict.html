@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="panel">
+  <h2>Emotion Prediction</h2>
+  <p class="lead">Paste a message or upload a chat screenshot to analyze tone and emotional signal.</p>
+  <form id="predForm">
+    <textarea name="text" placeholder="Type or paste your message here"></textarea>
+    <input type="file" name="file" accept=".txt,image/png,image/jpeg,image/jpg,image/webp">
+    <p class="hint">Supported: .txt, .png, .jpg, .jpeg, .webp</p>
+    <button type="submit">Predict</button>
+  </form>
+</section>
+<div id="result" class="result"></div>
+<script>
+const form = document.getElementById('predForm');
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const token = localStorage.getItem('token');
+  const fd = new FormData(form);
+  const hasFile = fd.get('file') && fd.get('file').name;
+  const headers = {};
+  if (token) headers.Authorization = 'Bearer ' + token;
+
+  let res;
+  if (hasFile) {
+    res = await fetch('/predict/', { method: 'POST', headers, body: fd });
+  } else {
+    headers['Content-Type'] = 'application/json';
+    res = await fetch('/predict/', { method: 'POST', headers, body: JSON.stringify({ text: fd.get('text') }) });
+  }
+
+  const data = await res.json();
+  if (!res.ok) {
+    const errMsg = data.msg || data.error || 'Prediction failed';
+    if (errMsg.toLowerCase().includes('token has expired') || errMsg.toLowerCase().includes('missing authorization header')) {
+      localStorage.removeItem('token');
+      alert('Session expired. Please log in again.');
+      window.location.href = '/auth/login';
+      return;
+    }
+    alert(errMsg);
+    return;
+  }
+
+  const pct = data.confidence_scores && data.confidence_scores.length
+    ? Math.round(100 * Math.max(...data.confidence_scores))
+    : 0;
+  document.getElementById('result').innerHTML = `
+    <div class="card">
+      <h3>${data.predicted_emotion}</h3>
+      <div class="bar"><div class="fill" style="width:${pct}%"></div></div>
+      <div class="meta">Confidence: ${pct}%</div>
+      <div class="meta">Input length: ${data.chars || 0} characters${data.long_text_mode ? ' (long-text mode)' : ''}</div>
+    </div>
+  `;
+});
+</script>
+{% endblock %}

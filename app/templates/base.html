@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Emotion Recognition</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="/predict/">EmotionScope</a>
+      <div class="nav-links">
+        <a href="/auth/login">Login</a>
+        <a href="/auth/register">Register</a>
+        <a href="/predict/">Predict</a>
+        <a href="/admin/dashboard">Admin</a>
+        <a href="#" id="logoutLink">Logout</a>
+      </div>
+    </div>
+  </nav>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+    const logoutLink = document.getElementById('logoutLink');
+    if (logoutLink) {
+      logoutLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        localStorage.removeItem('token');
+        window.location.href = '/auth/login';
+      });
+    }
+  </script>
+</body>
+</html>
